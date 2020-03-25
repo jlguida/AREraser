@@ -17,7 +17,7 @@
 <resources>
     <string name="app_name">SceneFormTest</string>
 
-    <string name="title_activity_main">AR Remover</string>
+    <string name="title_activity_main">AR Eraser</string>
     <string name="title_activity_sceneform">AR</string>
     <string name="title_activity_ml">ML</string>
     <string name="title_activity_segmentation">Segmentation</string>

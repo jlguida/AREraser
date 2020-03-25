@@ -27,18 +27,15 @@ import java.util.*
 
 //A class for defining the bounding box that the user places
 class PlaneManager : ViewSizer{
-    public var LEFTMOSTNODE = "leftmostnode"
-    public var RIGHTMOSTNODE = "rightmostnode"
-    public var TOPMOSTNODE = "topmostnode"
-    public var BOTTOMMOSTNODE = "bottommostnode"
+    val LEFTMOSTNODE = "leftmostnode"
+    val RIGHTMOSTNODE = "rightmostnode"
+    val TOPMOSTNODE = "topmostnode"
+    val BOTTOMMOSTNODE = "bottommostnode"
 
     private var globalBoundingPoints: MutableList<Vector3> = mutableListOf()
     private var globalBoundingNodes: MutableList<Node?> = mutableListOf(Node(), Node(), Node(), Node())
     private var boundNames = listOf<String>(LEFTMOSTNODE, RIGHTMOSTNODE, TOPMOSTNODE, BOTTOMMOSTNODE)
 
-    internal var focusedPlane: Plane? = null
-    internal var focusedPlaneCenterAnchor: Anchor? = null
-    internal var focusedPlaneNode: TransformableNode? = null
     private var TAG = "PLANEMANAGER"
 
     //Box dimensions
@@ -46,6 +43,7 @@ class PlaneManager : ViewSizer{
     val width = 5.0f
     val depth = 5.0f
 
+    //Bounding points for plane
     var minX = 1000.0f
     var minZ = 1000.0f
     var maxX = -1000.0f
@@ -276,9 +274,6 @@ class PlaneManager : ViewSizer{
                 globalBoundingNodes[i]?.setParent(null)
                 Log.d(TAG, "node is now null ${globalBoundingNodes[i]?.toString()} parent: ${globalBoundingNodes[i]?.parent.toString()}")
             }
-            //globalBoundingNodes[i]?.parent?.setParent(null)
-            //globalBoundingNodes[i]?.parent?.removeChild(globalBoundingNodes[i])
-            //globalBoundingNodes[i]?.setParent(null)
             globalBoundingNodes[i] = placeBoundingPoint(globalBoundingPoints[i], arFragment!!, getTopMostPlane(getPlanes(arFragment)!!.first()), boundNames[i])
         }
     }
@@ -307,12 +302,9 @@ class PlaneManager : ViewSizer{
             color
         )
             .thenAccept { material ->
-                val modelRenderable = ShapeFactory.makeCube(
-                    Vector3(
-                        0.02f,
-                        0.1f,
-                        0.02f
-                    ),
+                val modelRenderable = ShapeFactory.makeCylinder(
+                    0.03f,
+                    0.01f,
                     Vector3(0.0f, 0.0f, 0.0f),
                     material
                 )

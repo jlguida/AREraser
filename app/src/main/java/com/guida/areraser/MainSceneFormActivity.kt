@@ -23,11 +23,10 @@ import android.widget.Switch
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
+import androidx.core.app.ActivityCompat
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.ar.core.Anchor
-import com.google.ar.core.HitResult
-import com.google.ar.core.Plane
+import com.google.ar.core.*
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.Scene
@@ -76,6 +75,9 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
             return
         }
 
+        val permissions = arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        ActivityCompat.requestPermissions(this, permissions,0)
+
         tfLiteUtils.initialize(this)
 
         setContentView(R.layout.activity_ux)
@@ -99,6 +101,13 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         }
         arFragment = supportFragmentManager.findFragmentById(R.id.ux_fragment) as ArFragment?
         arFragment!!.arSceneView.scene.addOnUpdateListener(this)
+        // Configure the session with the Lighting Estimation API in ENVIRONMENTAL_HDR mode.
+        var session = Session(this)
+        var config = Config(session)
+        config!!.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+        config.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE)
+        arFragment!!.arSceneView.setupSession(session)
+        arFragment!!.arSceneView.session!!.configure(config)
         arFragment!!.setOnTapArPlaneListener {
                 hitResult: HitResult,
                 plane: Plane,
