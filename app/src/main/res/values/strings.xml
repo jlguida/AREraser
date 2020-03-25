@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright 2018 Google LLC.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+    <string name="app_name">SceneFormTest</string>
+
+    <string name="title_activity_main">AR Remover</string>
+    <string name="title_activity_sceneform">AR</string>
+    <string name="title_activity_ml">ML</string>
+    <string name="title_activity_segmentation">Segmentation</string>
+
+    <string name="saturn_image">Saturn image</string>
+    <string name="drawable_image_view">drawable image view</string>
+
+    <string name="to_ml">Go to ML</string>
+    <string name="to_ar">Go to AR</string>
+    <string name="to_segmentation">Go to Segmentation</string>
+
+    <string name="leftmost_point">LEFTMOSTPOINT</string>
+    <string name="rightmost_point">RIGHTMOSTPOINT</string>
+    <string name="topmost_point">TOPMOSTPOINT</string>
+    <string name="bottommost_point">BOTTOMMOSTPOINT</string>
+
+</resources>
