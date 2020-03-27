@@ -65,6 +65,7 @@ dependencies {
     implementation "com.google.ar.sceneform.ux:sceneform-ux:1.14.0"
     implementation 'org.tensorflow:tensorflow-lite:+'
     implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly'
+    implementation 'com.android.support:palette-v7:28.0.0'
     implementation 'com.google.android.gms:play-services-auth:17.0.0'
     def googlePlayServicesVersion = project.googlePlayServicesVersion
     implementation "com.google.android.gms:play-services-location:$googlePlayServicesVersion"

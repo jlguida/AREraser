@@ -23,8 +23,8 @@
 
       <androidx.cardview.widget.CardView
           android:layout_width="350dp"
-          android:layout_height="300dp"
-          android:layout_margin="25dp"
+          android:layout_height="375dp"
+          android:layout_margin="10dp"
           android:id="@+id/CardView"
           app:cardBackgroundColor="@color/colorPrimaryTransparent"
           app:contentPaddingBottom="25dp"
@@ -34,6 +34,18 @@
           <androidx.constraintlayout.widget.ConstraintLayout
               android:layout_width="match_parent"
               android:layout_height="match_parent">
+
+              <Switch
+                  android:id="@+id/lightsCheckBox"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="Lights "
+                  android:textFontWeight="700"
+                  android:thumbTint="@color/colorAccent"
+                  android:trackTint="@color/colorAccent"
+                  app:layout_constraintBottom_toTopOf="@+id/PreviewSwitch"
+                  app:layout_constraintEnd_toEndOf="parent"
+                  android:layout_margin="15dp"/>
 
               <ImageView
                   android:id="@+id/CapturePreview"
@@ -57,8 +69,7 @@
                   android:trackTint="@color/colorAccent"
                   app:layout_constraintBottom_toBottomOf="parent"
                   app:layout_constraintEnd_toEndOf="parent"
-                  android:layout_marginTop="15dp"
-                  android:layout_marginEnd="15dp"></Switch>
+                  android:layout_margin="15dp"></Switch>
 
               <Switch
                   android:id="@+id/PreviewSwitch"
@@ -83,6 +94,8 @@
                   android:tint="@color/cardview_light_background"
                   app:backgroundTint="@color/colorAccent"
                   app:layout_constraintBottom_toBottomOf="parent"
+                  android:layout_margin="10dp"
+
                   app:layout_constraintStart_toEndOf="@id/RemoveButton"
                   app:rippleColor="@color/colorAccent"
                   app:srcCompat="@drawable/ar_capture_placeholder" />
@@ -91,6 +104,8 @@
                   android:id="@+id/RemoveButton"
                   android:layout_width="wrap_content"
                   android:layout_height="wrap_content"
+                  android:layout_margin="10dp"
+
                   android:backgroundTint="@color/colorAccent"
                   android:clickable="true"
                   android:layout_marginStart="25dp"
@@ -106,13 +121,13 @@
 
       </androidx.cardview.widget.CardView>
 
-    <fragment
-        android:id="@+id/ux_fragment"
-        android:name="com.google.ar.sceneform.ux.ArFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        tools:layout_editor_absoluteX="0dp"
-        tools:layout_editor_absoluteY="0dp" />
+      <fragment
+          android:id="@+id/ux_fragment"
+          android:name="com.google.ar.sceneform.ux.ArFragment"
+          android:layout_width="match_parent"
+          android:layout_height="match_parent"
+          tools:layout_editor_absoluteX="0dp"
+          tools:layout_editor_absoluteY="0dp" />
 
   </androidx.constraintlayout.widget.ConstraintLayout>
 

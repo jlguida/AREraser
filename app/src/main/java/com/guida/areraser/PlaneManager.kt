@@ -23,6 +23,7 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import java.nio.FloatBuffer
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 
 //A class for defining the bounding box that the user places
@@ -92,47 +93,90 @@ class PlaneManager : ViewSizer{
             hitResult: HitResult
             ): TransformableNode? {
         var anchor = hitResult.trackable.createAnchor(
-                hitResult.hitPose.compose(Pose.makeTranslation(0.1f,-0.0f,0.0f))
+                hitResult.hitPose.compose(Pose.makeTranslation(0.3f,0.0f,0.3f))
         )
-        Log.d(TAG, "POINT TOUCHED: ${hitResult.hitPose.translation[0]}, ${hitResult.hitPose.translation[1]}, ${hitResult.hitPose.translation[2]}")
-            ViewRenderable
-                .builder()
-                .setView(arFragment.context, R.layout.bounding_box)
-                .setSizer(this)
-                .build()
-                .thenAccept { it ->
-                    it.isShadowCaster = false
-                    it.isShadowReceiver = true
+        Texture.builder()
+            .setSource(arFragment.context, R.drawable.bounding_box)
+            .build().thenAccept { texture: Texture ->
+                MaterialFactory.makeOpaqueWithTexture(
+                    arFragment.context,
+                    texture
+                ).thenAccept { material ->
+                    val modelRenderable = ShapeFactory.makeCube(
+                        Vector3(0.3f, 0.001f, 0.3f),
+                        Vector3(0.0f, 0.0f, 0.0f),
+                        material
+                    )
+                    material.setFloat(MaterialFactory.MATERIAL_METALLIC, 1.0f)
+                    material.setFloat(MaterialFactory.MATERIAL_REFLECTANCE, 0.5f)
+                    material.setFloat(MaterialFactory.MATERIAL_ROUGHNESS, 0.4f)
+                    modelRenderable.isShadowCaster = false
+                    modelRenderable.isShadowReceiver = true
                     val anchorNode = AnchorNode(anchor)
                     anchorNode.setParent(arFragment.arSceneView.scene)
                     transformableNode?.setParent(null)
                     transformableNode = TransformableNode(arFragment.transformationSystem)
                     transformableNode?.rotationController?.isEnabled = false
                     transformableNode?.scaleController?.isEnabled = false
-                    transformableNode?.renderable = it
+                    transformableNode?.renderable = modelRenderable
                     transformableNode?.setParent(anchorNode)
-                    transformableNode?.worldRotation = arFragment.arSceneView.scene.camera.worldRotation
-                    transformableNode?.localRotation =
-                        Quaternion.axisAngle(Vector3(1f, 0f, 0f), 90f)
-                }
-                .exceptionally {
+                    //transformableNode?.worldRotation = arFragment.arSceneView.scene.camera.worldRotation
+                    //transformableNode?.localRotation =
+                      //  Quaternion.axisAngle(Vector3(1f, 0f, 0f), 90f)
+
+                }.exceptionally {
                     val builder = AlertDialog.Builder(arFragment.context)
                     builder.setMessage(it.message).setTitle("${TAG}: Error")
                     builder.create().show()
                     return@exceptionally null
                 }
+            }.exceptionally {
+                val builder = AlertDialog.Builder(arFragment.context)
+                builder.setMessage(it.message).setTitle("${TAG}: Error")
+                builder.create().show()
+                return@exceptionally null
+            }
         return transformableNode
     }
 
-    fun updateBoundingBoxTexture(texture: Int) {
-        Log.d(TAG, "Updating Texture...")
-        var viewRenderable = transformableNode?.renderable as ViewRenderable
-        var layout = viewRenderable.view
-        var viewTexture = layout.findViewById<ImageView>(R.id.BoundingBox)
-        viewTexture.setImageResource(
-            texture
-        )
-        Log.d(TAG, "Updated Texture.")
+    fun updateBoundingBoxTexture(context: Context, textureID: Int) {
+        Texture.builder()
+            .setSource(context, textureID)
+            .build().thenAccept { texture: Texture ->
+                MaterialFactory.makeOpaqueWithTexture(
+                    context,
+                    texture
+                ).thenAccept { material ->
+                    val modelRenderable = ShapeFactory.makeCube(
+                        Vector3(0.3f, 0.001f, 0.3f),
+                        Vector3(0.0f, 0.0f, 0.0f),
+                        material
+                    )
+                    /*
+                    material.setFloat(MaterialFactory.MATERIAL_METALLIC, 0.0f)
+                    material.setFloat(MaterialFactory.MATERIAL_REFLECTANCE, 0.5f)
+                    material.setFloat(MaterialFactory.MATERIAL_ROUGHNESS, 0.4f)
+
+                     */
+                    modelRenderable.isShadowCaster = false
+                    modelRenderable.isShadowReceiver = true
+                    transformableNode?.renderable = modelRenderable
+                    //transformableNode?.worldRotation = arFragment.arSceneView.scene.camera.worldRotation
+                    //transformableNode?.localRotation =
+                    //  Quaternion.axisAngle(Vector3(1f, 0f, 0f), 90f)
+
+                }.exceptionally {
+                    val builder = AlertDialog.Builder(context)
+                    builder.setMessage(it.message).setTitle("${TAG}: Error")
+                    builder.create().show()
+                    return@exceptionally null
+                }
+            }.exceptionally {
+                val builder = AlertDialog.Builder(context)
+                builder.setMessage(it.message).setTitle("${TAG}: Error")
+                builder.create().show()
+                return@exceptionally null
+            }
     }
 
     fun tracePlane(plane:Plane, arFragment: ArFragment){
@@ -296,23 +340,37 @@ class PlaneManager : ViewSizer{
         if(name == TOPMOSTNODE) color = Color(0.0f, 0.0f, 255.0f)
         if(name == BOTTOMMOSTNODE) color = Color(255.0f, 255.0f, 0.0f)
 
+        Texture.builder()
+            .setSource(arFragment.context, R.drawable.sample_texture)
+            .build().thenAccept { texture: Texture ->
+                MaterialFactory.makeTransparentWithTexture(
+                    arFragment.context,
+                    texture
+                ).thenAccept{material ->
+                    //potentially find way to tweak these later
 
-        MaterialFactory.makeTransparentWithColor(
-            arFragment.context,
-            color
-        )
-            .thenAccept { material ->
-                val modelRenderable = ShapeFactory.makeCylinder(
-                    0.03f,
-                    0.01f,
-                    Vector3(0.0f, 0.0f, 0.0f),
-                    material
-                )
-                modelRenderable.isShadowCaster = true
-                modelRenderable.isShadowReceiver = true
-                boundingNode?.setParent(anchorNode)
-                boundingNode?.renderable = modelRenderable
-                boundingNode!!.setName(name)
+                    material.setFloat(MaterialFactory.MATERIAL_METALLIC, 1.0f)
+                    material.setFloat(MaterialFactory.MATERIAL_REFLECTANCE, 1.0f)
+                    material.setFloat(MaterialFactory.MATERIAL_ROUGHNESS, 0.0f)
+
+
+                    val modelRenderable = ShapeFactory.makeCylinder(
+                        0.05f,
+                        0.01f,
+                        Vector3(0.0f, 0.0f, 0.0f),
+                        material
+                    )
+                    modelRenderable.isShadowCaster = true
+                    modelRenderable.isShadowReceiver = true
+                    boundingNode?.setParent(anchorNode)
+                    boundingNode?.renderable = modelRenderable
+                    boundingNode!!.setName(name)
+                }.exceptionally {
+                    val builder = AlertDialog.Builder(arFragment.context)
+                    builder.setMessage(it.message).setTitle("${TAG}: Error")
+                    builder.create().show()
+                    return@exceptionally null
+                }
             }.exceptionally {
                 val builder = AlertDialog.Builder(arFragment.context)
                 builder.setMessage(it.message).setTitle("${TAG}: Error")

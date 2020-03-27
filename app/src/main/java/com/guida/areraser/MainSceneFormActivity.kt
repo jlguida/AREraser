@@ -5,6 +5,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.content.res.AssetFileDescriptor
 import android.graphics.Bitmap
+import android.media.Image
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
@@ -17,20 +18,19 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
-import android.widget.ImageView
-import android.widget.Switch
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.view.updateLayoutParams
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.ar.core.*
+import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.FrameTime
 import com.google.ar.sceneform.Node
 import com.google.ar.sceneform.Scene
 import com.google.ar.sceneform.math.Vector3
+import com.google.ar.sceneform.rendering.Light
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.PlaneRenderer
 import com.google.ar.sceneform.rendering.Texture
@@ -59,11 +59,17 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
     private var removeButton: FloatingActionButton? = null
     private var editSwitch: Switch? = null
     private var cardView: CardView? = null
+    private var lightsCheckBox: Switch? = null
+    private var estimatedLightsCheckBox: CheckBox? = null
     private var capturePreview: ImageView? = null
     private var previewSwitch: Switch? = null
     private var captureButton: FloatingActionButton? = null
     private var globalBoundingPoints: MutableList<Vector3> = mutableListOf()
-
+    private var session: Session? = null
+    private var config: Config? = null
+    private var intensity: FloatArray? = null
+    private var direction: FloatArray? = null
+    var lightmaps: Array<ArImage>? = null
 
 
     override// CompletableFuture requires api level 24
@@ -81,6 +87,8 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         tfLiteUtils.initialize(this)
 
         setContentView(R.layout.activity_ux)
+        lightsCheckBox = findViewById(R.id.lightsCheckBox)
+        //estimatedLightsCheckBox = findViewById(R.id.estimatedLightsCheckbox)
         removeButton = findViewById(R.id.RemoveButton)
         editSwitch = findViewById(R.id.EditSwitch)
         previewSwitch = findViewById(R.id.PreviewSwitch)
@@ -102,26 +110,33 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         arFragment = supportFragmentManager.findFragmentById(R.id.ux_fragment) as ArFragment?
         arFragment!!.arSceneView.scene.addOnUpdateListener(this)
         // Configure the session with the Lighting Estimation API in ENVIRONMENTAL_HDR mode.
-        var session = Session(this)
-        var config = Config(session)
+        session = Session(this)
+        config = Config(session)
         config!!.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-        config.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE)
+        config!!.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE)
         arFragment!!.arSceneView.setupSession(session)
         arFragment!!.arSceneView.session!!.configure(config)
+        arFragment!!.arSceneView.scene.sunlight!!.light!!.intensity = 0.0f
+        lightsCheckBox?.setOnCheckedChangeListener{buttonView, isChecked ->
+            LightingUtils.toggleLights(arFragment!!.arSceneView.scene.sunlight!!, isChecked)
+        }
+        /*
+        estimatedLightsCheckBox?.setOnCheckedChangeListener{buttonView, isChecked ->
+            LightingUtils.applyEnvironmentalLightingCubeMap(lightmaps!!, capturePreview!!)
+            //Log.d(TAG, "Direction before value: ${arFragment!!.arSceneView.scene.sunlight!!.worldPosition}")
+
+            LightingUtils.setDirectionalLightValues(planeManager.transformableNode?.parent as AnchorNode, intensity!!, direction!!, isChecked, arFragment?.context!!)
+            //Log.d(TAG, "Direction after value: ${direction!![0]}, ${direction!![1]}, ${direction!![2]}")
+
+        }
+
+         */
         arFragment!!.setOnTapArPlaneListener {
                 hitResult: HitResult,
                 plane: Plane,
                 motionEvent: MotionEvent ->
                     globalBoundingPoints = planeManager.getCombinedGlobalBoundingPoints(arFragment!!)
                     planeManager.placeAllBoundingNodes(arFragment!!)
-            /*
-                    planeManager.placeBoundingPoint(globalBoundingPoints[0], arFragment!!, plane, planeManager.LEFTMOSTNODE)
-                    planeManager.placeBoundingPoint(globalBoundingPoints[1], arFragment!!, plane, planeManager.TOPMOSTNODE)
-                    planeManager.placeBoundingPoint(globalBoundingPoints[2], arFragment!!, plane, planeManager.RIGHTMOSTNODE)
-                    planeManager.placeBoundingPoint(globalBoundingPoints[3], arFragment!!, plane, planeManager.BOTTOMMOSTNODE)
-                    //planeManager.tracePlane(plane, arFragment as ArFragment)
-
-             */
                     planeManager.placeBoxOnPlane(
                         arFragment!!,
                         hitResult
@@ -144,7 +159,8 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     fun removeSelection(){
-        planeManager.updateBoundingBoxTexture(R.drawable.sample_texture)
+        setupRealisticHDRLighting()
+        planeManager.updateBoundingBoxTexture(arFragment?.context!!, R.drawable.sample_texture)
     }
 
     fun toggleEditMode(isChecked: Boolean){
@@ -156,11 +172,11 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         Toast.makeText(this, "${layoutParams?.height}", Toast.LENGTH_LONG)
             .show()
         if(!isChecked){
-            var height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 300.0f, resources.displayMetrics)
+            var height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 375.0f, resources.displayMetrics)
             capturePreview?.imageAlpha = 255
             layoutParams?.height = height.toInt()
         } else {
-            var height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 100.0f, resources.displayMetrics)
+            var height = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 175.0f, resources.displayMetrics)
             capturePreview?.imageAlpha = 0
             layoutParams?.height = height.toInt()
         }
@@ -174,9 +190,9 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         return true
     }
 
-
     override fun onUpdate(frameTime: FrameTime) {
-        //Log.d(TAG, arFragment!!.arSceneView.session!!.getAllTrackables(Plane::class.java).size.toString())
+        //setupRealisticHDRLighting()
+
         var sampler =
             Texture.Sampler.builder()
                 .setMinFilter(Texture.Sampler.MinFilter.LINEAR)
@@ -202,6 +218,20 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         if (!tfLiteUtils.labelList.isEmpty()){
             //Log.d(TAG, "${frameTime.deltaSeconds}: ${tfLiteUtils.labelList[0]}: ${tfLiteUtils.getNormalizedProbability(0)}}")
         }
+    }
+
+    fun setupRealisticHDRLighting(){
+        var frame: Frame = session!!.update()
+        var lightEstimate: LightEstimate = frame.lightEstimate
+        intensity = lightEstimate.environmentalHdrMainLightIntensity
+        Log.d(TAG, "Intensity value: ${intensity!![0].toString()} of ${intensity!!.size}")
+        direction = lightEstimate.environmentalHdrMainLightDirection
+        Log.d(TAG, "Direction value: ${direction!![0].toString()} of ${direction!!.size}")
+        //var harmonics = lightEstimate.environmentalHdrAmbientSphericalHarmonics
+        //Log.d(TAG, "Harmonics value: ${harmonics[0].toString()} of ${harmonics.size}")
+        //lightmaps = lightEstimate.acquireEnvironmentalHdrCubeMap()
+        LightingUtils.setDirectionalLightValues(planeManager.transformableNode?.parent, intensity!!, direction!!, true, arFragment?.context!!)
+
     }
 
     companion object {
