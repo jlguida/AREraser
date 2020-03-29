@@ -24,6 +24,8 @@ import com.google.ar.sceneform.ux.TransformableNode
 import java.nio.FloatBuffer
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import kotlin.math.max
+import kotlin.math.min
 
 
 //A class for defining the bounding box that the user places
@@ -139,7 +141,13 @@ class PlaneManager : ViewSizer{
         return transformableNode
     }
 
-    fun updateBoundingBoxTexture(context: Context, textureID: Int) {
+    fun updateBoundingBoxTexture(
+        context: Context,
+        textureID: Int,
+        isShadowReceiver: Boolean,
+        metallic: Float,
+        roughness: Float,
+        reflectance: Float) {
         Texture.builder()
             .setSource(context, textureID)
             .build().thenAccept { texture: Texture ->
@@ -152,14 +160,13 @@ class PlaneManager : ViewSizer{
                         Vector3(0.0f, 0.0f, 0.0f),
                         material
                     )
-                    /*
+
                     material.setFloat(MaterialFactory.MATERIAL_METALLIC, 0.0f)
                     material.setFloat(MaterialFactory.MATERIAL_REFLECTANCE, 0.5f)
                     material.setFloat(MaterialFactory.MATERIAL_ROUGHNESS, 0.4f)
 
-                     */
                     modelRenderable.isShadowCaster = false
-                    modelRenderable.isShadowReceiver = true
+                    modelRenderable.isShadowReceiver = isShadowReceiver
                     transformableNode?.renderable = modelRenderable
                     //transformableNode?.worldRotation = arFragment.arSceneView.scene.camera.worldRotation
                     //transformableNode?.localRotation =
@@ -274,6 +281,27 @@ class PlaneManager : ViewSizer{
         }
         return combinedGlobalBoundingPoints
     }
+/*
+    fun getRectangleBounds(globalBoundingPoints: MutableList<Vector3>): MutableList<Vector3>{
+        Log.d(TAG, "Global bounds: ${
+            globalBoundingPoints[0].x}, " +
+                "${globalBoundingPoints[0].z}, " +
+                "${globalBoundingPoints[1].x}, " +
+                "${globalBoundingPoints[1].z}, " +
+                "${globalBoundingPoints[2].x}, " +
+                "${globalBoundingPoints[2].z}, " +
+                "${globalBoundingPoints[3].x}, " +
+                "${globalBoundingPoints[3].z}, ")
+
+        return mutableListOf(
+            min(min(globalBoundingPoints[0].x, globalBoundingPoints[1].x),min(globalBoundingPoints[2].x, globalBoundingPoints[3].x)),
+            max(max(globalBoundingPoints[0].x, globalBoundingPoints[1].x),max(globalBoundingPoints[2].x, globalBoundingPoints[3].x)),
+            min(min(globalBoundingPoints[0].z, globalBoundingPoints[1].z),min(globalBoundingPoints[2].z, globalBoundingPoints[3].z)),
+            max(max(globalBoundingPoints[0].z, globalBoundingPoints[1].z),max(globalBoundingPoints[2].z, globalBoundingPoints[3].z))
+            )
+    }
+
+ */
 
     //returns global x,y,z coordinates of bounding points
     private fun getGlobalBoundingPoints(lrtb: FloatArray, centerPose: Pose): MutableList<Vector3> {
@@ -343,25 +371,18 @@ class PlaneManager : ViewSizer{
         Texture.builder()
             .setSource(arFragment.context, R.drawable.sample_texture)
             .build().thenAccept { texture: Texture ->
-                MaterialFactory.makeTransparentWithTexture(
+                MaterialFactory.makeOpaqueWithColor(
                     arFragment.context,
-                    texture
+                    color
                 ).thenAccept{material ->
-                    //potentially find way to tweak these later
-
-                    material.setFloat(MaterialFactory.MATERIAL_METALLIC, 1.0f)
-                    material.setFloat(MaterialFactory.MATERIAL_REFLECTANCE, 1.0f)
-                    material.setFloat(MaterialFactory.MATERIAL_ROUGHNESS, 0.0f)
-
-
                     val modelRenderable = ShapeFactory.makeCylinder(
-                        0.05f,
-                        0.01f,
+                        0.075f,
+                        0.1f,
                         Vector3(0.0f, 0.0f, 0.0f),
                         material
                     )
-                    modelRenderable.isShadowCaster = true
-                    modelRenderable.isShadowReceiver = true
+                    modelRenderable.isShadowCaster = false
+                    modelRenderable.isShadowReceiver = false
                     boundingNode?.setParent(anchorNode)
                     boundingNode?.renderable = modelRenderable
                     boundingNode!!.setName(name)

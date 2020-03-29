@@ -145,22 +145,29 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
     }
 
     fun generateInputPreview(){
-        var screenMaxMinPoints = floatArrayOf(
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[0])[0],
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[1])[0],
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[2])[1],
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[3])[1]
+        maskSelection()
+        var screenMaxMinPoints = mutableListOf<FloatArray>(
+            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[0]),
+            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[1]),
+            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[2]),
+            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[3])
         )
+        var sortedPoints = ImageUtils.sortLRTB(screenMaxMinPoints)
         ImageUtils.captureCroppedSceneView(
             arFragment as ArFragment,
             this,
-            screenMaxMinPoints
+            sortedPoints
         )
     }
 
     fun removeSelection(){
         setupRealisticHDRLighting()
-        planeManager.updateBoundingBoxTexture(arFragment?.context!!, R.drawable.sample_texture)
+        planeManager.updateBoundingBoxTexture(arFragment?.context!!, R.drawable.sample_texture, true, 0.0f, 0.5f, 0.4f)
+    }
+
+    fun maskSelection(){
+        planeManager.updateBoundingBoxTexture(arFragment?.context!!, R.drawable.white_mask, false, 0.0f, 1.0f, 0.0f)
+
     }
 
     fun toggleEditMode(isChecked: Boolean){
