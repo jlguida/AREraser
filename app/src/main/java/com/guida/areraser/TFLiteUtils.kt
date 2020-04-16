@@ -34,8 +34,8 @@ class TFLiteUtils {
 
     var imgData: ByteBuffer = ByteBuffer.allocateDirect(
         DIM_BATCH_SIZE
-                * 224
-                * 224
+                * 128
+                * 128
                 * DIM_PIXEL_SIZE
                 * 1
     )

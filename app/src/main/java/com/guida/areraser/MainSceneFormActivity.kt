@@ -37,6 +37,7 @@ import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.objects.FirebaseVisionObjectDetectorOptions
+import org.opencv.android.OpenCVLoader
 import java.io.FileInputStream
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
@@ -76,7 +77,9 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
     // FutureReturnValueIgnored is not valid
     fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+            if (!OpenCVLoader.initDebug()) {
+                Log.d(TAG, "Did not init openCV loader")
+            }
         if (!checkIsSupportedDeviceOrFinish(this)) {
             return
         }
@@ -146,18 +149,13 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
 
     fun generateInputPreview(){
         maskSelection()
-        var screenMaxMinPoints = mutableListOf<FloatArray>(
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[0]),
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[1]),
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[2]),
-            ImageUtils.getScreenCoordinate(arFragment!!, globalBoundingPoints[3])
-        )
-        var sortedPoints = ImageUtils.sortLRTB(screenMaxMinPoints)
-        ImageUtils.captureCroppedSceneView(
+        var boxCorners = planeManager.getBoxCorners(arFragment!!)
+        ImageUtils.captureTransformedPlane(
             arFragment as ArFragment,
             this,
-            sortedPoints
+            boxCorners
         )
+
     }
 
     fun removeSelection(){
@@ -192,7 +190,15 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
 
     fun updateCapturePreview(bitmap: Bitmap): Boolean{
         Log.d(TAG, "Updating Preview...")
+        tfLiteUtils.convertBitmapToByteBuffer(ImageUtils.shapeImageForInput(bitmap))
+        tfLiteUtils.tflite?.run(tfLiteUtils.imgData, tfLiteUtils.labelProbArray)
+        if (!tfLiteUtils.labelList.isEmpty()){
+            Log.d(TAG, "${tfLiteUtils.labelProbArray?.size}: ${tfLiteUtils.labelProbArray!![0].size}")
+        }
+        //capturePreview?.setImageBitmap(ImageUtils.shapeImageForInput(bitmap))
+        Log.d(TAG, "${bitmap.width}, ${bitmap.height}")
         capturePreview?.setImageBitmap(bitmap)
+
         Log.d(TAG, "Updated...")
         return true
     }
@@ -218,13 +224,6 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
                         material.setFloat(PlaneRenderer.MATERIAL_SPOTLIGHT_RADIUS, 100.0f)
                     }
             }
-        val bitmap =
-            Bitmap.createBitmap(224, 224, Bitmap.Config.ARGB_8888)
-        tfLiteUtils.convertBitmapToByteBuffer(bitmap)
-        tfLiteUtils.tflite?.run(tfLiteUtils.imgData, tfLiteUtils.labelProbArray)
-        if (!tfLiteUtils.labelList.isEmpty()){
-            //Log.d(TAG, "${frameTime.deltaSeconds}: ${tfLiteUtils.labelList[0]}: ${tfLiteUtils.getNormalizedProbability(0)}}")
-        }
     }
 
     fun setupRealisticHDRLighting(){
@@ -240,6 +239,7 @@ class MainSceneFormActivity : AppCompatActivity(), Scene.OnUpdateListener {
         LightingUtils.setDirectionalLightValues(planeManager.transformableNode?.parent, intensity!!, direction!!, true, arFragment?.context!!)
 
     }
+
 
     companion object {
         private val MIN_OPENGL_VERSION = 3.0

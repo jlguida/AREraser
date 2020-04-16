@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.PointF
 import android.graphics.Rect
 import android.os.Handler
 import android.os.HandlerThread
@@ -20,6 +21,12 @@ import java.lang.Integer.max
 import java.util.*
 import android.util.DisplayMetrics
 import androidx.fragment.app.FragmentActivity
+import org.opencv.android.Utils
+import org.opencv.core.*
+import org.opencv.imgproc.Imgproc
+import org.opencv.utils.Converters
+
+
 
 
 object ImageUtils {
@@ -54,6 +61,10 @@ object ImageUtils {
                             arFragment.context,
                             "Succesfuly copied pixels: $copyResult", Toast.LENGTH_LONG
                         )
+                        var tl = Point(boundingRect.left.toDouble(), boundingRect.top.toDouble())
+                        var tr = Point(boundingRect.right.toDouble(), boundingRect.top.toDouble())
+                        var bl = Point(boundingRect.left.toDouble(), boundingRect.bottom.toDouble())
+                        var br = Point(boundingRect.right.toDouble(), boundingRect.bottom.toDouble())
                         updateUIHandler.runOnUiThread(java.lang.Runnable {
                             updateUIHandler.updateCapturePreview(fullScene as Bitmap)
                         })
@@ -103,53 +114,72 @@ object ImageUtils {
         )
     }
 
+    fun captureTransformedPlane(arFragment: ArFragment, updateUIHandler: MainSceneFormActivity, cornerPoints: List<Point>) {
+        var bitmap = createBlankSceneBitmap(arFragment)
+        //Create handler thread
+        var handlerThread = HandlerThread("PixelCopy Thread")
+        handlerThread.start()
+        //Make a request to copy
+            PixelCopy.request(
+                arFragment.arSceneView,
+                bitmap,
+                {copyResult  ->
+                    if (copyResult == PixelCopy.SUCCESS) {
+                        fullScene = bitmap
+                        val toast = Toast.makeText(
+                            arFragment.context,
+                            "Succesfuly copied pixels: $copyResult", Toast.LENGTH_LONG
+                        )
+                        var skewed_bitmap = transformImage(fullScene as Bitmap, cornerPoints[0], cornerPoints[1], cornerPoints[2], cornerPoints[3])
+                        updateUIHandler.runOnUiThread(java.lang.Runnable {
+                            updateUIHandler.updateCapturePreview(skewed_bitmap as Bitmap)
+                        })
+                        toast.show()
+                    } else {
+                        val toast = Toast.makeText(
+                            arFragment.context,
+                            "Failed to copy pixels: $copyResult", Toast.LENGTH_LONG
+                        )
+                        toast.show()
+                    }
+                },
+                Handler(handlerThread.looper)
+            )
+    }
     //Gets the x,y coordinates for the world coordinate point
     //Input: the 3D point that needs to be converted
     //Output: the 2D points that lies on the screen
-    fun getScreenCoordinate(arFragment: ArFragment, worldPoint: Vector3): FloatArray {
+    fun getScreenCoordinate(arFragment: ArFragment, worldPoint: Vector3): DoubleArray {
         var screenPoint = arFragment.arSceneView.scene.camera.worldToScreenPoint(worldPoint)
-        return floatArrayOf(screenPoint.x, screenPoint.y)
+        return doubleArrayOf(screenPoint.x.toDouble(), screenPoint.y.toDouble())
     }
 
-    fun sortLRTB(screenPoints: MutableList<FloatArray>): FloatArray {
-        Log.d(TAG, "Unsorted Points: " +
-                "(${screenPoints[0][0]}, ${screenPoints[0][1]}), " +
-                "(${screenPoints[1][0]}, ${screenPoints[1][1]}), " +
-                "(${screenPoints[2][0]}, ${screenPoints[2][1]}), " +
-                "(${screenPoints[3][0]}, ${screenPoints[3][1]}), "
+    fun sortLRTB(points: MutableList<Point>): MutableList<Point> {
+        var sortedPoints: MutableList<Point> = mutableListOf(
+            points[0],
+            points[1],
+            points[2],
+            points[3]
         )
-        var sortedPoints: MutableList<FloatArray> = mutableListOf(
-            screenPoints[0],
-            screenPoints[1],
-            screenPoints[2],
-            screenPoints[3]
-        )
-        var screenMaxMinPoints: FloatArray = floatArrayOf(0.0f, 0.0f, 0.0f, 0.0f)
         for(i in 0..3){
             //find least x coordinate
-            Log.d(TAG, "Point: (${screenPoints[i][0]}, ${screenPoints[i][1]}")
-            if(screenPoints[i][0] <= sortedPoints[0][0] ){
-                sortedPoints[0] = screenPoints[i]
-                screenMaxMinPoints[0] = screenPoints[i][0]
+            if(points[i].x <= sortedPoints[0].x ){
+                sortedPoints[0] = points[i]
             }
             //find greatest x coordinate
-            if(screenPoints[i][0] >= sortedPoints[1][0] ){
-                sortedPoints[1] = screenPoints[i]
-                screenMaxMinPoints[1] = screenPoints[i][0]
+            if(points[i].x >= sortedPoints[1].x ){
+                sortedPoints[1] = points[i]
             }
             //find least y coordinate
-            if(screenPoints[i][1] <= sortedPoints[3][1] ){
-                sortedPoints[3] = screenPoints[i]
-                screenMaxMinPoints[3] = screenPoints[i][1]
+            if(points[i].y <= sortedPoints[3].y ){
+                sortedPoints[3] = points[i]
             }
             //find greatest y coordinate
-            if(screenPoints[i][1] >= sortedPoints[2][1] ){
-                sortedPoints[2] = screenPoints[i]
-                screenMaxMinPoints[2] = screenPoints[i][1]
+            if(points[i].y >= sortedPoints[2].y ){
+                sortedPoints[2] = points[i]
             }
         }
-        Log.d(TAG, "Sorted Points: ${screenMaxMinPoints[0]}, ${screenMaxMinPoints[1]}, ${screenMaxMinPoints[2]}, ${screenMaxMinPoints[3]}")
-        return screenMaxMinPoints
+        return sortedPoints
     }
 
     fun getCroppedRectangle(context: FragmentActivity, screenMaxMinPoints: FloatArray): Rect{
@@ -170,7 +200,69 @@ object ImageUtils {
         return rect
     }
 
-    fun getTopBound(arFragment: ArFragment) {
+    fun shapeImageForInput(bitmap: Bitmap): Bitmap {
+        return Bitmap.createScaledBitmap(bitmap, 128, 128, true)
+    }
 
+
+    fun transformImage(bitmap: Bitmap, tl: Point, tr: Point, bl:Point, br: Point): Bitmap {
+        //var sorted = sortLRTB(mutableListOf(tl, tr, bl, br))
+        Log.d(TAG, tl.x.toString() + ", " + tl.y.toString())
+        Log.d(TAG, tr.x.toString() + ", " + tr.y.toString())
+        Log.d(TAG, bl.x.toString() + ", " + bl.y.toString())
+        Log.d(TAG, br.x.toString()  + ", " +  br.y.toString())
+
+        var result_width = (tr.x - tl.x).toInt()
+        var bottom_width = (br.x - bl.x).toInt()
+        if(bottom_width > result_width){
+            result_width = bottom_width
+        }
+
+        var result_height = (bl.y - tl.y).toInt()
+        var bottom_height = (br.y - tr.y).toInt()
+        if(bottom_height > result_height){
+            result_height = bottom_height
+        }
+
+        Log.d(TAG, result_width.toString())
+        Log.d(TAG, result_height.toString())
+        var inputMat: Mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC4)
+        Utils.bitmapToMat(bitmap, inputMat)
+        val outputMat = Mat(result_width, result_width, CvType.CV_8UC4)
+
+        val ocvPIn1 = Point(tl.x, tl.y)
+        val ocvPIn2 = Point(tr.x, tr.y)
+        val ocvPIn3 = Point(bl.x, bl.y)
+        val ocvPIn4 = Point(br.x, br.y)
+        val source = ArrayList<Point>()
+        source.add(ocvPIn1)
+        source.add(ocvPIn2)
+        source.add(ocvPIn3)
+        source.add(ocvPIn4)
+        val startM = Converters.vector_Point2f_to_Mat(source)
+
+        val ocvPOut1 = Point(0.0, 0.0)
+        val ocvPOut2 = Point(result_width.toDouble(), 0.0)
+        val ocvPOut3 = Point(0.0, result_width.toDouble())
+        val ocvPOut4 = Point(result_width.toDouble(), result_width.toDouble())
+        val dest = ArrayList<Point>()
+        dest.add(ocvPOut1)
+        dest.add(ocvPOut2)
+        dest.add(ocvPOut3)
+        dest.add(ocvPOut4)
+        val endM = Converters.vector_Point2f_to_Mat(dest)
+
+        val perspectiveTransform = Imgproc.getPerspectiveTransform(startM, endM)
+
+        Imgproc.warpPerspective(
+            inputMat,
+            outputMat,
+            perspectiveTransform,
+            Size(result_width.toDouble(), result_width.toDouble())
+        )
+
+        val output = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(outputMat, output)
+        return output
     }
 }

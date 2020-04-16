@@ -21,6 +21,7 @@ import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.*
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.TransformableNode
+import org.opencv.core.Point
 import java.nio.FloatBuffer
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -376,7 +377,7 @@ class PlaneManager : ViewSizer{
                     color
                 ).thenAccept{material ->
                     val modelRenderable = ShapeFactory.makeCylinder(
-                        0.075f,
+                        0.03f,
                         0.1f,
                         Vector3(0.0f, 0.0f, 0.0f),
                         material
@@ -421,5 +422,41 @@ class PlaneManager : ViewSizer{
     }
     override fun getSize(view: View?): Vector3 {
         return Vector3(0.2f, 0.2f, 0.2f)
+    }
+
+    fun getBoxCorners(arFragment: ArFragment): List<Point> {
+        var pos = transformableNode?.localPosition
+        var tl = transformableNode?.localToWorldPoint(Vector3(
+            pos!!.x - 0.3f,
+            pos!!.y ,
+            pos!!.z - 0.3f
+        ))
+        var tr = transformableNode?.localToWorldPoint(Vector3(
+            pos!!.x + 0.3f,
+            pos!!.y,
+            pos!!.z - 0.3f
+        ))
+        var br = transformableNode?.localToWorldPoint(Vector3(
+            pos!!.x + 0.3f,
+            pos!!.y,
+            pos!!.z + 0.3f
+        ))
+        var bl = transformableNode?.localToWorldPoint(Vector3(
+            pos!!.x - 0.3f,
+            pos!!.y,
+            pos!!.z  + 0.3f
+        ))
+        placeBoundingPoint(tl!!,arFragment,getTopMostPlane(getPlanes(arFragment)!!.first()), "tl")
+        placeBoundingPoint(tr!!,arFragment,getTopMostPlane(getPlanes(arFragment)!!.first()), "tr")
+        placeBoundingPoint(bl!!,arFragment,getTopMostPlane(getPlanes(arFragment)!!.first()), "bl")
+        placeBoundingPoint(br!!,arFragment,getTopMostPlane(getPlanes(arFragment)!!.first()), "br")
+
+        return listOf(
+            Point(ImageUtils.getScreenCoordinate(arFragment, tl!!)),
+            Point(ImageUtils.getScreenCoordinate(arFragment, tr!!)),
+            Point(ImageUtils.getScreenCoordinate(arFragment, bl!!)),
+            Point(ImageUtils.getScreenCoordinate(arFragment, br!!))
+
+            )
     }
 }
